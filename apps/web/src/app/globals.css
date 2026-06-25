@@ -1,0 +1,134 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  :root {
+    --paper: #fbfaf8;
+    --surface: #ffffff;
+    --ink: #16151a;
+    --muted: #6b6a73;
+    --line: #ece9e3;
+    --accent: #5b4be6;
+    --accent-soft: #eeebfb;
+    --sealed: #0f9d6b;
+    --sealed-soft: #e4f4ee;
+    --alert: #e2562b;
+    --alert-soft: #fbe9e2;
+  }
+
+  html {
+    background: var(--paper);
+    color: var(--ink);
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+    text-rendering: optimizeLegibility;
+  }
+
+  body {
+    @apply bg-paper text-ink font-sans text-body;
+  }
+
+  ::selection {
+    background: var(--accent-soft);
+    color: var(--ink);
+  }
+
+  *:focus-visible {
+    outline: 2px solid var(--accent);
+    outline-offset: 2px;
+    border-radius: 4px;
+  }
+
+  /* Respect reduced motion across the entire surface — §12.4. */
+  @media (prefers-reduced-motion: reduce) {
+    *, *::before, *::after {
+      animation-duration: 0.001ms !important;
+      animation-iteration-count: 1 !important;
+      transition-duration: 0.001ms !important;
+      scroll-behavior: auto !important;
+    }
+  }
+}
+
+@layer components {
+  .container-readable {
+    @apply mx-auto w-full max-w-6xl px-6 sm:px-8;
+  }
+
+  .hairline {
+    @apply border border-line;
+  }
+
+  .card {
+    @apply rounded-card bg-surface hairline;
+  }
+
+  .card-elevated {
+    @apply card shadow-elevated;
+  }
+
+  .btn {
+    @apply inline-flex items-center justify-center gap-2 rounded-card px-4 py-2.5
+      text-small font-medium transition-colors duration-150 ease-seal;
+  }
+
+  .btn-primary {
+    @apply btn bg-ink text-paper hover:bg-[#2a2933];
+  }
+
+  .btn-accent {
+    @apply btn bg-accent text-white hover:bg-[#4a3cd0];
+  }
+
+  .btn-ghost {
+    @apply btn text-ink hover:bg-line/60;
+  }
+
+  .pill {
+    @apply inline-flex items-center gap-1.5 rounded-full px-2.5 py-1
+      text-xs font-medium;
+  }
+
+  .pill-draft {
+    @apply pill bg-accent-soft text-accent;
+  }
+
+  .pill-sealed {
+    @apply pill bg-sealed-soft text-sealed;
+  }
+
+  .pill-alert {
+    @apply pill bg-alert-soft text-alert;
+  }
+}
+
+/* The seal animation — §12.2. The orchestrated ~600ms moment. */
+@keyframes seal-edge {
+  0%   { box-shadow: 0 0 0 2px var(--accent) inset; }
+  60%  { box-shadow: 0 0 0 3px var(--sealed) inset; }
+  100% { box-shadow: 0 0 0 2px var(--sealed) inset; }
+}
+
+@keyframes seal-stamp {
+  0%   { transform: scale(0.6) rotate(-8deg); opacity: 0; }
+  60%  { transform: scale(1.1) rotate(2deg);  opacity: 1; }
+  100% { transform: scale(1)   rotate(0);     opacity: 1; }
+}
+
+@keyframes seal-hash {
+  0%   { opacity: 0; transform: translateY(4px); }
+  100% { opacity: 1; transform: translateY(0); }
+}
+
+.sealing { animation: seal-edge 600ms cubic-bezier(0.22, 0.61, 0.36, 1) forwards; }
+.sealing-stamp { animation: seal-stamp 600ms cubic-bezier(0.22, 0.61, 0.36, 1) forwards; }
+.sealing-hash { animation: seal-hash 400ms ease-out 500ms backwards; }
+
+/* "Message lands in capsule" — §12.4 gentle slide. */
+@keyframes lands-in {
+  0%   { transform: translateY(-6px); opacity: 0; }
+  100% { transform: translateY(0);    opacity: 1; }
+}
+
+.lands-in { animation: lands-in 180ms ease-out; }
