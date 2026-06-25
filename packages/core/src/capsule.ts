@@ -10,13 +10,15 @@ import {
 import { applyRedactions, scanForSecrets } from "@capsule/redaction";
 import { computeContentHash } from "./hash";
 import { newAuditId, newCapsuleId, newMessageId } from "./ids";
+import { canAddMessage, canCreateCapsule, canDereference } from "./limits";
 
 export type DereferenceRefusal =
   | { ok: false; reason: "not_found" }
   | { ok: false; reason: "not_owner" }
   | { ok: false; reason: "not_finalized" }
   | { ok: false; reason: "expired" }
-  | { ok: false; reason: "single_use_consumed" };
+  | { ok: false; reason: "single_use_consumed" }
+  | { ok: false; reason: "rate_limited"; retryAfterSeconds?: number };
 
 export type DereferenceSuccess = {
   ok: true;
@@ -36,6 +38,13 @@ export type OpenDraftInput = {
  * Open a new draft capsule (or return the user's existing active draft).
  * §11 default-deny: this is the only way new messages can land anywhere.
  */
+export class RateLimitError extends Error {
+  constructor(message: string, public retryAfterSeconds?: number) {
+    super(message);
+    this.name = "RateLimitError";
+  }
+}
+
 export async function openOrGetActiveDraft(
   db: Database,
   input: OpenDraftInput,
@@ -45,6 +54,14 @@ export async function openOrGetActiveDraft(
     orderBy: (c, { desc }) => [desc(c.createdAt)],
   });
   if (existing) return existing;
+
+  // Only the *first* time a draft is opened in this window do we hit the limit.
+  // Returning an existing draft is free — adding messages to it is bounded by
+  // canAddMessage instead.
+  const decision = await canCreateCapsule(db, input.ownerId);
+  if (!decision.ok) {
+    throw new RateLimitError(decision.reason, decision.retryAfterSeconds);
+  }
 
   const id = newCapsuleId();
   const [created] = await db
@@ -103,6 +120,15 @@ export async function addMessageToDraft(
       eq(capsuleMessages.slackTs, input.slackTs),
     ),
   });
+
+  // Only enforce the message cap on net-new additions — re-syncing an existing
+  // message must always succeed so we don't refuse on retries.
+  if (!existing) {
+    const decision = await canAddMessage(db, input.capsuleId);
+    if (!decision.ok) {
+      throw new RateLimitError(decision.reason);
+    }
+  }
 
   if (existing) {
     const [updated] = await db
@@ -238,6 +264,18 @@ export async function dereferenceCapsule(
   capsuleId: string,
   ctx: DereferenceContext,
 ): Promise<DereferenceResult> {
+  // Rate-limit check runs OUTSIDE the txn so we don't hold a row lock while
+  // the count query runs. Throttled actors get refused before we touch the
+  // capsule at all — id-guessing attacks pay the cost in their own audit log.
+  const limitDecision = await canDereference(db, ctx.actorIdentity);
+  if (!limitDecision.ok) {
+    return {
+      ok: false,
+      reason: "rate_limited",
+      retryAfterSeconds: limitDecision.retryAfterSeconds,
+    };
+  }
+
   return db.transaction(async (tx): Promise<DereferenceResult> => {
     const capsule = await tx.query.capsules.findFirst({
       where: eq(capsules.id, capsuleId),
@@ -248,7 +286,9 @@ export async function dereferenceCapsule(
       return { ok: false, reason: "not_found" };
     }
 
-    const refuse = async (reason: DereferenceRefusal["reason"]): Promise<DereferenceRefusal> => {
+    const refuse = async <R extends DereferenceRefusal["reason"]>(
+      reason: R,
+    ): Promise<DereferenceRefusal> => {
       await tx.insert(auditEvents).values({
         id: newAuditId(),
         capsuleId,
@@ -256,7 +296,7 @@ export async function dereferenceCapsule(
         event: "dereference_refused",
         clientMeta: { ...ctx.clientMeta, reason },
       });
-      return { ok: false, reason };
+      return { ok: false, reason } as DereferenceRefusal;
     };
 
     if (capsule.ownerId !== ctx.ownerUserId) return refuse("not_owner");
@@ -310,5 +350,7 @@ export function refusalMessage(reason: DereferenceRefusal["reason"]): string {
       return "That capsule has expired. Open a new one in Slack.";
     case "single_use_consumed":
       return "That capsule was single-use and has already been read once.";
+    case "rate_limited":
+      return "Rate limit hit. Retry shortly.";
   }
 }

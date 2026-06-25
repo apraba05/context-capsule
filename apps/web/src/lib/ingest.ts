@@ -10,6 +10,7 @@ import {
   addMessageToDraft,
   newUserId,
   openOrGetActiveDraft,
+  RateLimitError,
 } from "@capsule/core";
 import { slackClient } from "./slack";
 
@@ -113,23 +114,30 @@ export async function ingestMessage(input: {
   });
 
   const db = getDatabase();
-  const draft = await openOrGetActiveDraft(db, {
-    ownerId: userId,
-    workspaceId: ws.id,
-  });
+  try {
+    const draft = await openOrGetActiveDraft(db, {
+      ownerId: userId,
+      workspaceId: ws.id,
+    });
 
-  await addMessageToDraft(db, {
-    capsuleId: draft.id,
-    slackChannelId: input.channel,
-    slackTs: input.ts,
-    threadTs: message.thread_ts ?? null,
-    text: message.text ?? "",
-    author: {
-      slackUserId: message.user ?? "unknown",
-      displayName,
-      realName,
-    },
-  });
+    await addMessageToDraft(db, {
+      capsuleId: draft.id,
+      slackChannelId: input.channel,
+      slackTs: input.ts,
+      threadTs: message.thread_ts ?? null,
+      text: message.text ?? "",
+      author: {
+        slackUserId: message.user ?? "unknown",
+        displayName,
+        realName,
+      },
+    });
 
-  return { capsuleId: draft.id };
+    return { capsuleId: draft.id };
+  } catch (e) {
+    if (e instanceof RateLimitError) {
+      return { error: `rate_limited:${e.message}` };
+    }
+    throw e;
+  }
 }

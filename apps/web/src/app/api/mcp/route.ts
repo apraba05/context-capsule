@@ -220,6 +220,12 @@ async function callFetchCapsule(args: {
   });
 
   if (!res.ok) {
+    // For rate-limited refusals, include retry hint in the message so a
+    // well-behaved agent can back off without re-fetching.
+    if (res.reason === "rate_limited") {
+      const seconds = res.retryAfterSeconds ?? 60;
+      return toolError(`${refusalMessage(res.reason)} Retry after ${seconds}s.`);
+    }
     return toolError(refusalMessage(res.reason));
   }
 

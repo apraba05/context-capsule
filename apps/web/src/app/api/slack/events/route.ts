@@ -63,8 +63,19 @@ export async function POST(req: Request) {
       }
 
       // Acknowledge immediately, do the work after — Slack wants a 3s response.
+      // The ack is optimistic: rate-limit refusals etc. will not reach the user
+      // synchronously. We send a follow-up via response_url in a later iteration;
+      // for now, ingestMessage errors are persisted in logs and visible at /capsules.
       after(async () => {
-        await ingestMessage({ teamId, slackUserId: userId, channel, ts });
+        const result = await ingestMessage({
+          teamId,
+          slackUserId: userId,
+          channel,
+          ts,
+        });
+        if ("error" in result) {
+          console.warn("[capsule:ingest]", { teamId, userId, channel, ts, error: result.error });
+        }
       });
 
       return NextResponse.json({
