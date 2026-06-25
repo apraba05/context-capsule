@@ -8,6 +8,8 @@ import {
 } from "@capsule/db";
 import {
   addMessageToDraft,
+  channelPolicyMessage,
+  isChannelAllowed,
   newUserId,
   openOrGetActiveDraft,
   RateLimitError,
@@ -63,6 +65,14 @@ export async function ingestMessage(input: {
 }): Promise<{ capsuleId: string } | { error: string }> {
   const ws = await getWorkspaceByTeam(input.teamId);
   if (!ws) return { error: "workspace_not_installed" };
+
+  // Workspace channel policy is the first gate. Refuse blocked channels
+  // *before* contacting Slack — saves rate-limit budget AND ensures we never
+  // see the message text we're refusing to ingest.
+  const decision = isChannelAllowed(ws.channelPolicy, input.channel);
+  if (!decision.allowed) {
+    return { error: `channel_policy:${channelPolicyMessage(decision.reason)}` };
+  }
 
   const token = decrypt(ws.encryptedOauthToken);
   const client = slackClient(token);

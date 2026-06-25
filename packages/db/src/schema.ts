@@ -25,6 +25,21 @@ export const auditEventType = pgEnum("audit_event_type", [
   "dereference_refused",
 ]);
 
+/**
+ * Per-workspace channel access policy. Enforced at ingest time.
+ *
+ * - `none`: any channel the bot can see is fair game (default).
+ * - `blocklist`: channels listed in `channels` are forbidden; everything else is allowed.
+ * - `allowlist`: only channels listed in `channels` are allowed.
+ *
+ * Stored as Slack channel IDs (stable across renames). The UI maps IDs ↔ names
+ * by calling conversations.list on demand.
+ */
+export type ChannelPolicy = {
+  mode: "none" | "blocklist" | "allowlist";
+  channels: string[];
+};
+
 export const workspaces = pgTable(
   "workspaces",
   {
@@ -34,6 +49,10 @@ export const workspaces = pgTable(
     // Envelope-encrypted Slack OAuth token. Never store plaintext.
     encryptedOauthToken: text("encrypted_oauth_token").notNull(),
     installedBy: text("installed_by").notNull(),
+    channelPolicy: json("channel_policy").$type<ChannelPolicy>().notNull().default({
+      mode: "none",
+      channels: [],
+    }),
     createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
   },
   (t) => ({

@@ -8,6 +8,13 @@
       "when": 1719273600000,
       "tag": "0000_initial",
       "breakpoints": true
+    },
+    {
+      "idx": 1,
+      "version": "5",
+      "when": 1782000000000,
+      "tag": "0001_channel_policy",
+      "breakpoints": true
     }
   ]
 }
