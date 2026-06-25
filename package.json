@@ -17,6 +17,9 @@
     "db:migrate": "pnpm --filter @capsule/db migrate",
     "db:generate": "pnpm --filter @capsule/db generate"
   },
+  "dependencies": {
+    "next": "15.5.19"
+  },
   "devDependencies": {
     "@types/node": "^20.11.0",
     "typescript": "^5.4.0",
