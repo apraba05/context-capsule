@@ -1,0 +1,48 @@
+# Context Capsule — production manifest for context-capsule-seven.vercel.app.
+# This file is what you paste into Slack's "Create app from manifest" flow.
+# slack-manifest.yml is the example with placeholder URLs.
+
+display_information:
+  name: Context Capsule
+  description: Curate Slack messages into immutable capsules. Hand them to your AI coding agent — read-only, scoped, audited.
+  background_color: "#5B4BE6"
+  long_description: |
+    Context Capsule lets you select exact Slack messages and bundle them into
+    immutable, redacted capsules that your coding agent can read through an
+    MCP server. The agent never holds your Slack token. Each dereference is
+    audited. You can also revoke or set capsules to single-use.
+
+features:
+  bot_user:
+    display_name: Context Capsule
+    always_online: false
+
+  shortcuts:
+    - name: Add to capsule
+      type: message
+      callback_id: add_to_capsule
+      description: Add this message to your active draft capsule
+
+oauth_config:
+  redirect_urls:
+    - https://context-capsule-seven.vercel.app/api/slack/oauth_redirect
+  scopes:
+    bot:
+      - channels:history
+      - groups:history
+      - im:history
+      - mpim:history
+      - channels:read
+      - users:read
+      - commands
+
+settings:
+  event_subscriptions:
+    request_url: https://context-capsule-seven.vercel.app/api/slack/events
+    bot_events: []
+  interactivity:
+    is_enabled: true
+    request_url: https://context-capsule-seven.vercel.app/api/slack/events
+  org_deploy_enabled: false
+  socket_mode_enabled: false
+  token_rotation_enabled: false
