@@ -3,6 +3,7 @@ import { eq } from "drizzle-orm";
 import { getDatabase, workspaces } from "@capsule/db";
 import { SiteHeader } from "@/components/SiteHeader";
 import { getSession } from "@/lib/session";
+import { DeleteAccountForm } from "./DeleteAccountForm";
 
 export const dynamic = "force-dynamic";
 
@@ -69,6 +70,16 @@ export default async function SettingsPage() {
               New capsules default to multi-read with no expiry. Toggle single-use per capsule on
               the review screen.
             </p>
+          </div>
+        </div>
+
+        <div className="mt-10 rounded-card border border-alert-soft bg-alert-soft/40 p-6">
+          <h2 className="text-h3 font-medium text-ink">Danger zone</h2>
+          <p className="mt-2 text-body text-muted">
+            Delete every capsule, message, and audit event tied to your account.
+          </p>
+          <div className="mt-4">
+            <DeleteAccountForm />
           </div>
         </div>
       </section>

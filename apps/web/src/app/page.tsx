@@ -126,10 +126,12 @@ export default function LandingPage() {
           </div>
           <div className="flex items-center gap-6">
             <Link href="/capsules" className="hover:text-ink">Dashboard</Link>
+            <Link href="/privacy" className="hover:text-ink">Privacy</Link>
+            <Link href="/terms" className="hover:text-ink">Terms</Link>
             <a href="https://github.com/apraba05/context-capsule" className="hover:text-ink">
               GitHub
             </a>
-            <span>MIT licensed</span>
+            <span>MIT</span>
           </div>
         </div>
       </footer>
