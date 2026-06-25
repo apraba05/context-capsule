@@ -1,5 +1,5 @@
-import { DEFAULT_DETECTORS, denylistDetector } from "./detectors.js";
-import type { Detector, RedactedSpan } from "./types.js";
+import { DEFAULT_DETECTORS, denylistDetector } from "./detectors";
+import type { Detector, RedactedSpan } from "./types";
 
 export type ScanOptions = {
   detectors?: Detector[];

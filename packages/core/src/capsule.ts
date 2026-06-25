@@ -8,8 +8,8 @@ import {
   auditEvents,
 } from "@capsule/db";
 import { applyRedactions, scanForSecrets } from "@capsule/redaction";
-import { computeContentHash } from "./hash.js";
-import { newAuditId, newCapsuleId, newMessageId } from "./ids.js";
+import { computeContentHash } from "./hash";
+import { newAuditId, newCapsuleId, newMessageId } from "./ids";
 
 export type DereferenceRefusal =
   | { ok: false; reason: "not_found" }

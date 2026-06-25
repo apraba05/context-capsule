@@ -11,7 +11,7 @@ import {
   newUserId,
   openOrGetActiveDraft,
 } from "@capsule/core";
-import { slackClient } from "./slack.js";
+import { slackClient } from "./slack";
 
 /**
  * Resolve (or upsert) a Capsule user for the given Slack identity.
@@ -74,7 +74,14 @@ export async function ingestMessage(input: {
       inclusive: true,
       limit: 1,
     });
-    message = (res.messages?.[0] as never) ?? null;
+    const raw = res.messages?.[0];
+    message = raw
+      ? {
+          text: typeof raw.text === "string" ? raw.text : undefined,
+          user: typeof raw.user === "string" ? raw.user : undefined,
+          thread_ts: typeof raw.thread_ts === "string" ? raw.thread_ts : undefined,
+        }
+      : null;
   } catch (e) {
     const code = (e as { data?: { error?: string } }).data?.error ?? "slack_error";
     return { error: `slack_fetch_failed:${code}` };

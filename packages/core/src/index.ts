@@ -1,3 +1,3 @@
-export * from "./capsule.js";
-export * from "./hash.js";
-export * from "./ids.js";
+export * from "./capsule";
+export * from "./hash";
+export * from "./ids";

@@ -1,5 +1,5 @@
-export * from "./types.js";
-export * from "./scan.js";
+export * from "./types";
+export * from "./scan";
 export {
   DEFAULT_DETECTORS,
   PROVIDER_KEY_DETECTORS,
@@ -8,4 +8,4 @@ export {
   SSN_DETECTOR,
   CREDIT_CARD_DETECTOR,
   denylistDetector,
-} from "./detectors.js";
+} from "./detectors";

@@ -1,4 +1,4 @@
-import type { Detector } from "./types.js";
+import type { Detector } from "./types";
 
 function regexDetector(id: string, reason: Detector["reason"], pattern: RegExp): Detector {
   // Force global so we get every occurrence.

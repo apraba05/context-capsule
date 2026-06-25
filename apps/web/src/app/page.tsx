@@ -157,7 +157,7 @@ function HeroCapsule() {
 
         <div className="mt-6 space-y-3">
           <MessagePreview author="riley" text="rolling back to 2024.06.18. metrics show the latency spike started at 14:31 UTC." />
-          <MessagePreview author="noor"  text='cause: the new "warm pool" code path wasn't gated. patch incoming.' />
+          <MessagePreview author="noor"  text={`cause: the new "warm pool" code path wasn't gated. patch incoming.`} />
           <MessagePreview author="dev"   text="postmortem scheduled. attaching the timeline." />
         </div>
 
