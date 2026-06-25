@@ -9,7 +9,7 @@ export const dynamic = "force-dynamic";
 
 export default async function SettingsPage() {
   const session = await getSession();
-  if (!session) redirect("/dev-login?next=/settings");
+  if (!session) redirect("/sign-in?next=/settings");
 
   const db = getDatabase();
   const workspace = await db.query.workspaces.findFirst({

@@ -94,5 +94,11 @@ export async function GET(req: Request) {
   }
 
   await setSession(user.id);
-  return NextResponse.redirect(`${base}/capsules`);
+
+  const nextCookie = c.get("capsule_oauth_next")?.value;
+  c.delete("capsule_oauth_next");
+  const dest = nextCookie && /^\/[a-z0-9/_\-?&=.]*$/i.test(nextCookie) && !nextCookie.startsWith("//")
+    ? nextCookie
+    : "/capsules";
+  return NextResponse.redirect(`${base}${dest}`);
 }

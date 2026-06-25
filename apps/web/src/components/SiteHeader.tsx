@@ -23,6 +23,7 @@ export function SiteHeader({ inApp = false }: { inApp?: boolean }) {
             <>
               <Link href="/#how" className="btn-ghost">How it works</Link>
               <Link href="/#trust" className="btn-ghost">Trust</Link>
+              <Link href="/sign-in" className="btn-ghost">Sign in</Link>
               <Link href="/api/slack/install" className="btn-primary">Add to Slack</Link>
             </>
           )}

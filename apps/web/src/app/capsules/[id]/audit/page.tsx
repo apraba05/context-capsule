@@ -14,7 +14,7 @@ export default async function AuditPage({
 }) {
   const { id } = await params;
   const session = await getSession();
-  if (!session) redirect(`/dev-login?next=/capsules/${id}/audit`);
+  if (!session) redirect(`/sign-in?next=/capsules/${id}/audit`);
 
   const db = getDatabase();
   const capsule = await db.query.capsules.findFirst({

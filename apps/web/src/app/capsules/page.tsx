@@ -11,7 +11,7 @@ export const dynamic = "force-dynamic";
 
 export default async function CapsulesPage() {
   const session = await getSession();
-  if (!session) redirect("/dev-login?next=/capsules");
+  if (!session) redirect("/sign-in?next=/capsules");
 
   const db = getDatabase();
   const rows = await db
@@ -89,12 +89,33 @@ export default async function CapsulesPage() {
 
 function EmptyState() {
   return (
-    <div className="mt-10 card p-12 text-center">
-      <CapsuleMark size={36} className="mx-auto opacity-60" />
-      <h2 className="mt-4 text-h2 font-medium tracking-tight">No capsules yet</h2>
-      <p className="mx-auto mt-2 max-w-md text-body text-muted">
-        Select a message in Slack — overflow menu → <em>Add to capsule</em> — to start one.
-      </p>
+    <div className="mt-10 card p-12">
+      <div className="text-center">
+        <CapsuleMark size={36} className="mx-auto opacity-60" />
+        <h2 className="mt-4 text-h2 font-medium tracking-tight">Your first capsule is one shortcut away</h2>
+        <p className="mx-auto mt-2 max-w-md text-body text-muted">
+          You're signed in. Now go to Slack and curate the messages you want your agent to see.
+        </p>
+      </div>
+
+      <ol className="mx-auto mt-10 max-w-xl space-y-4 text-body text-ink">
+        <li className="flex gap-4">
+          <span className="shrink-0 rounded-full bg-accent-soft px-3 py-0.5 font-mono text-small text-accent">1</span>
+          <span>Open Slack and find a message you want your agent to see.</span>
+        </li>
+        <li className="flex gap-4">
+          <span className="shrink-0 rounded-full bg-accent-soft px-3 py-0.5 font-mono text-small text-accent">2</span>
+          <span>Hover the message, click the <strong>•••</strong> menu, choose <em>Add to capsule</em>.</span>
+        </li>
+        <li className="flex gap-4">
+          <span className="shrink-0 rounded-full bg-accent-soft px-3 py-0.5 font-mono text-small text-accent">3</span>
+          <span>Come back here, review, redact, and seal the capsule.</span>
+        </li>
+        <li className="flex gap-4">
+          <span className="shrink-0 rounded-full bg-accent-soft px-3 py-0.5 font-mono text-small text-accent">4</span>
+          <span>Visit <a href="/settings" className="text-accent underline">Settings</a> to mint your MCP bearer token and point your agent at it.</span>
+        </li>
+      </ol>
     </div>
   );
 }

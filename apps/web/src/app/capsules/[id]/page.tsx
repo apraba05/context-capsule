@@ -15,7 +15,7 @@ export default async function ReviewPage({
 }) {
   const { id } = await params;
   const session = await getSession();
-  if (!session) redirect(`/dev-login?next=/capsules/${id}`);
+  if (!session) redirect(`/sign-in?next=/capsules/${id}`);
 
   const db = getDatabase();
   const capsule = await db.query.capsules.findFirst({
