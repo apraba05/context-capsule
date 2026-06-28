@@ -14,7 +14,7 @@ import {
   openOrGetActiveDraft,
   RateLimitError,
 } from "@capsule/core";
-import { slackClient } from "./slack";
+import { postSlackFollowUp, slackClient } from "./slack";
 
 /**
  * Resolve (or upsert) a Capsule user for the given Slack identity.
@@ -50,28 +50,59 @@ export async function getWorkspaceByTeam(teamId: string): Promise<Workspace | nu
   return ws ?? null;
 }
 
+export type IngestOutcome =
+  | { ok: true; capsuleId: string }
+  | { ok: false; kind: "workspace_not_installed" }
+  | { ok: false; kind: "channel_policy"; message: string }
+  | { ok: false; kind: "rate_limited"; message: string }
+  | { ok: false; kind: "message_not_visible" }
+  | { ok: false; kind: "slack_error"; code: string };
+
 /**
  * Fetch one Slack message and persist it into the user's active draft capsule.
  *
- * This is the function the shortcut handler calls via waitUntil(). It must be
+ * This is the function the shortcut handler calls via after(). It must be
  * idempotent — selecting the same message twice should not duplicate it. The
  * core layer already enforces that via the unique (capsule, channel, ts) idx.
+ *
+ * If `responseUrl` is provided, this function will post a follow-up to Slack
+ * (replacing the optimistic "added to capsule" ack) describing the real
+ * outcome.
  */
 export async function ingestMessage(input: {
   teamId: string;
   slackUserId: string;
   channel: string;
   ts: string;
-}): Promise<{ capsuleId: string } | { error: string }> {
+  responseUrl?: string;
+  webBaseUrl?: string;
+}): Promise<IngestOutcome> {
+  const outcome = await doIngest(input);
+  if (input.responseUrl) {
+    await postFollowUp(outcome, input.responseUrl, input.webBaseUrl);
+  }
+  return outcome;
+}
+
+async function doIngest(input: {
+  teamId: string;
+  slackUserId: string;
+  channel: string;
+  ts: string;
+}): Promise<IngestOutcome> {
   const ws = await getWorkspaceByTeam(input.teamId);
-  if (!ws) return { error: "workspace_not_installed" };
+  if (!ws) return { ok: false, kind: "workspace_not_installed" };
 
   // Workspace channel policy is the first gate. Refuse blocked channels
   // *before* contacting Slack — saves rate-limit budget AND ensures we never
   // see the message text we're refusing to ingest.
   const decision = isChannelAllowed(ws.channelPolicy, input.channel);
   if (!decision.allowed) {
-    return { error: `channel_policy:${channelPolicyMessage(decision.reason)}` };
+    return {
+      ok: false,
+      kind: "channel_policy",
+      message: channelPolicyMessage(decision.reason),
+    };
   }
 
   const token = decrypt(ws.encryptedOauthToken);
@@ -95,11 +126,11 @@ export async function ingestMessage(input: {
       : null;
   } catch (e) {
     const code = (e as { data?: { error?: string } }).data?.error ?? "slack_error";
-    return { error: `slack_fetch_failed:${code}` };
+    return { ok: false, kind: "slack_error", code };
   }
 
   if (!message) {
-    return { error: "message_not_visible" };
+    return { ok: false, kind: "message_not_visible" };
   }
 
   let displayName = message.user ?? "unknown";
@@ -114,7 +145,7 @@ export async function ingestMessage(input: {
         message.user;
       realName = info.user?.profile?.real_name;
     } catch {
-      // Author resolution is best-effort. We'd rather have the message than fail the ingest.
+      // Author resolution is best-effort.
     }
   }
 
@@ -143,11 +174,46 @@ export async function ingestMessage(input: {
       },
     });
 
-    return { capsuleId: draft.id };
+    return { ok: true, capsuleId: draft.id };
   } catch (e) {
     if (e instanceof RateLimitError) {
-      return { error: `rate_limited:${e.message}` };
+      return { ok: false, kind: "rate_limited", message: e.message };
     }
     throw e;
   }
+}
+
+async function postFollowUp(
+  outcome: IngestOutcome,
+  responseUrl: string,
+  webBaseUrl?: string,
+): Promise<void> {
+  const base = webBaseUrl ?? process.env.PUBLIC_BASE_URL ?? process.env.WEB_BASE_URL;
+
+  if (outcome.ok) {
+    const capsuleUrl = base ? `${base}/capsules/${outcome.capsuleId}` : null;
+    await postSlackFollowUp(responseUrl, {
+      text: `:capsule: Added to your draft capsule.${
+        capsuleUrl ? ` Review and seal: ${capsuleUrl}` : ""
+      }`,
+    });
+    return;
+  }
+
+  const text = (() => {
+    switch (outcome.kind) {
+      case "workspace_not_installed":
+        return ":warning: Context Capsule isn't installed in this workspace.";
+      case "channel_policy":
+        return `:no_entry_sign: ${outcome.message}`;
+      case "rate_limited":
+        return `:hourglass: ${outcome.message}`;
+      case "message_not_visible":
+        return ":warning: I can't see that message. Invite the Context Capsule bot to this channel and try again.";
+      case "slack_error":
+        return `:warning: Slack returned an error (${outcome.code}). Try again, or check that the bot has been invited to this channel.`;
+    }
+  })();
+
+  await postSlackFollowUp(responseUrl, { text });
 }

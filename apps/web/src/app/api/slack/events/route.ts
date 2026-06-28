@@ -54,6 +54,7 @@ export async function POST(req: Request) {
       const userId = payload.user?.id as string | undefined;
       const channel = payload.channel?.id as string | undefined;
       const ts = payload.message?.ts as string | undefined;
+      const responseUrl = (payload as { response_url?: string }).response_url;
 
       if (!teamId || !userId || !channel || !ts) {
         return NextResponse.json({
@@ -62,25 +63,32 @@ export async function POST(req: Request) {
         });
       }
 
-      // Acknowledge immediately, do the work after — Slack wants a 3s response.
-      // The ack is optimistic: rate-limit refusals etc. will not reach the user
-      // synchronously. We send a follow-up via response_url in a later iteration;
-      // for now, ingestMessage errors are persisted in logs and visible at /capsules.
+      // Slack requires a response within 3s. We ack optimistically here and
+      // post a follow-up via response_url once the real work is done — that
+      // follow-up replaces this ack with the actual outcome (success, channel
+      // policy refusal, rate limit, missing-bot-in-channel, etc).
       after(async () => {
         const result = await ingestMessage({
           teamId,
           slackUserId: userId,
           channel,
           ts,
+          responseUrl,
         });
-        if ("error" in result) {
-          console.warn("[capsule:ingest]", { teamId, userId, channel, ts, error: result.error });
+        if (!result.ok) {
+          console.warn("[capsule:ingest]", {
+            teamId,
+            userId,
+            channel,
+            ts,
+            kind: result.kind,
+          });
         }
       });
 
       return NextResponse.json({
         response_type: "ephemeral",
-        text: ":capsule: Added to your draft capsule. Review and seal in the web app.",
+        text: ":hourglass_flowing_sand: Adding to your capsule…",
       });
     }
 
